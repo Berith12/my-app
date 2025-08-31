@@ -1,146 +1,91 @@
-// app/Login.js
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
-import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import { useAuth } from "../context/AuthContext";
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
+import axios from 'axios';
 
-export default function Login() {
+export default function LoginPage() {
   const router = useRouter();
-  const auth = useAuth();
-  const contextLogin = auth ? auth.login : null;
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const validateInputs = () => {
-    if (!email) {
-      Alert.alert("Validation Error", "Email is required");
-      return false;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert("Validation Error", "Enter a valid email address");
-      return false;
-    }
-    if (!password) {
-      Alert.alert("Validation Error", "Password is required");
-      return false;
-    }
-    if (password.length < 6) {
-      Alert.alert("Validation Error", "Password must be at least 6 characters");
-      return false;
-    }
-    return true;
-  };
-
   const handleLogin = async () => {
-    if (!validateInputs()) return;
-
+    setError(null);
     setLoading(true);
+
     try {
-      const res = await axios.post(
-        "https://backend-8o4k.onrender.com/api/auth/login",
-        { email, password },
-        { headers: { "Content-Type": "application/json" } }
-      );
-
-      const data = res.data;
-      console.log("Login Response:", data);
-
-      if (data.token) {
-        await AsyncStorage.setItem("token", data.token);
+      if (!email.trim() || !password.trim()) {
+        setError('Please fill in all fields');
+        setLoading(false);
+        return;
       }
 
-      if (contextLogin) {
-        contextLogin({ ...data.data, token: data.token });
-      }
+  const response = await axios.post("https://backend-8o4k.onrender.com/api/auth/login", {
+        email,
+        password,
+      });
 
-      Alert.alert("Success", "Login successful!");
-      router.push("/home");
+      console.log(response.data);
+      router.push("/dashboard");
     } catch (err) {
-      const msg =
-        err.response?.data?.message || err.message || "Login failed";
-      Alert.alert("Login Error", msg);
+      setError('Invalid credentials or server error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View className="flex-1 bg-black items-center justify-center p-5">
-      <Text className="text-white text-2xl font-bold mb-8">
-        Library Management System
-      </Text>
+    <ScrollView className="flex-1 bg-black px-4 py-16 justify-center">
+      <View className="items-center mb-8">
+        <Text className="text-3xl font-bold text-white mb-2">Welcome Back</Text>
+        <Text className="text-gray-400 text-center">
+          Sign in to manage your library account
+        </Text>
+      </View>
 
-      <View className="w-full bg-neutral-900 p-6 rounded-2xl">
-        <Text className="text-gray-300 text-sm">Email</Text>
+      {error && <Text className="text-red-400 text-center mb-4">{error}</Text>}
+
+      <View className="bg-gray-900 border border-gray-700 rounded-xl p-6">
+        <Text className="text-gray-300 mb-1">Email</Text>
         <TextInput
+          className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 mb-4"
+          placeholder="you@example.com"
           value={email}
           onChangeText={setEmail}
-          placeholder="you@example.com"
-          placeholderTextColor="#888"
-          autoCapitalize="none"
           keyboardType="email-address"
-          className="bg-neutral-800 text-white px-3 py-2 rounded-lg mt-2"
+          autoCapitalize="none"
         />
 
-        <Text className="text-gray-300 text-sm mt-4">Password</Text>
-        <View className="flex-row items-center">
+        <Text className="text-gray-300 mb-1">Password</Text>
+        <View className="relative mb-4">
           <TextInput
+            className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700"
+            placeholder="••••••••"
+            secureTextEntry={!showPw}
             value={password}
             onChangeText={setPassword}
-            placeholder="••••••••"
-            placeholderTextColor="#888"
-            secureTextEntry={!showPw}
-            className="flex-1 bg-neutral-800 text-white px-3 py-2 rounded-lg mt-2"
           />
           <TouchableOpacity
-            onPress={() => setShowPw((s) => !s)}
-            className="ml-2 mt-2 px-2"
+            onPress={() => setShowPw(s => !s)}
+            className="absolute right-2 top-2"
           >
-            <Text className="text-blue-400 text-xs">
-              {showPw ? "Hide" : "Show"}
-            </Text>
+            <Text className="text-gray-400">{showPw ? 'Hide' : 'Show'}</Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          disabled={loading}
           onPress={handleLogin}
-          className={`bg-blue-600 py-3 rounded-lg mt-6 ${
-            loading ? "opacity-60" : ""
-          }`}
+          disabled={loading}
+          className="bg-blue-600 py-3 rounded mt-2 disabled:opacity-50"
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-white text-center font-semibold">
-              Sign In
-            </Text>
-          )}
+          <Text className="text-white font-semibold text-center">
+            {loading ? "Signing in…" : "Sign In"}
+          </Text>
         </TouchableOpacity>
 
-        <Text className="text-gray-400 text-center mt-4">
-          New here?{" "}
-          <Text
-            className="text-blue-400"
-            onPress={() => router.push("/register")}
-          >
-            Create an account
-          </Text>
-        </Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
